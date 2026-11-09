@@ -1,0 +1,77 @@
+---
+title: Otigba MFB - Entity Relationship Diagram
+---
+erDiagram
+    BRANCHES ||--o{ CUSTOMERS : "is home branch of"
+    CUSTOMERS ||--|{ ACCOUNTS : "owns"
+    ACCOUNT_TYPES ||--o{ ACCOUNTS : "defines rules for"
+    ACCOUNTS ||--o{ LEDGER_ENTRIES : "is debited/credited by"
+    TRANSACTIONS ||--|{ LEDGER_ENTRIES : "is recorded as"
+    TRANSACTIONS |o--o| TRANSACTIONS : "reverses"
+    ACCOUNTS ||--o{ AUDIT_LOG : "changes logged in"
+
+    BRANCHES {
+        int branch_id PK
+        varchar branch_code UK
+        varchar branch_name
+        varchar city
+        varchar state
+    }
+    CUSTOMERS {
+        int customer_id PK
+        char bvn UK "11 digits"
+        varchar first_name
+        varchar last_name
+        varchar email UK
+        varchar phone UK
+        date date_of_birth "18+"
+        smallint kyc_tier "1-3"
+        int home_branch_id FK
+        timestamptz created_at
+    }
+    ACCOUNT_TYPES {
+        varchar account_type_code PK
+        varchar description
+        numeric daily_debit_limit
+        numeric interest_rate_pct
+    }
+    ACCOUNTS {
+        int account_id PK
+        char account_number UK "10-digit NUBAN"
+        int customer_id FK
+        varchar account_type_code FK
+        char currency
+        numeric balance ">= 0"
+        varchar status "ACTIVE/FROZEN/CLOSED"
+        timestamptz opened_at
+    }
+    TRANSACTIONS {
+        bigint txn_id PK
+        varchar reference UK
+        varchar txn_type
+        numeric amount "> 0"
+        varchar channel
+        varchar status
+        varchar narration
+        bigint reversed_txn_id FK
+        timestamptz created_at
+    }
+    LEDGER_ENTRIES {
+        bigint entry_id PK
+        bigint txn_id FK
+        int account_id FK
+        char entry_type "DEBIT/CREDIT"
+        numeric amount
+        numeric balance_after
+        timestamptz created_at
+    }
+    AUDIT_LOG {
+        bigint audit_id PK
+        varchar table_name
+        bigint record_id
+        varchar action
+        jsonb old_data
+        jsonb new_data
+        varchar performed_by
+        timestamptz performed_at
+    }
