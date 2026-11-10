@@ -1,0 +1,39 @@
+---
+title: Otigba MFB - Proposed distributed data architecture
+---
+flowchart LR
+    subgraph CH["Customer channels"]
+        APP["Mobile app"]
+        USSD["USSD *5573#"]
+        POS["POS terminals"]
+    end
+
+    API["Otigba API services<br/>(stateless, autoscaled)"]
+
+    subgraph PG["Ledger: PostgreSQL cluster (system of record, CP)"]
+        direction TB
+        PGP[("Primary<br/>Zone A<br/>all writes")]
+        PGS[("Synchronous standby<br/>Zone B<br/>automatic failover")]
+        PGR[("Async read replica<br/>Zone C<br/>reports & analytics")]
+        PGP -- "synchronous WAL<br/>(no committed transfer lost)" --> PGS
+        PGP -. "asynchronous WAL<br/>(may lag seconds)" .-> PGR
+    end
+
+    subgraph MDB["Profiles & activity: MongoDB Atlas replica set (otigba-cluster)"]
+        direction TB
+        MP[("Primary<br/>writes, w: majority")]
+        MS1[("Secondary 1<br/>read: secondaryPreferred")]
+        MS2[("Secondary 2<br/>election candidate")]
+        MP -- "oplog replication" --> MS1
+        MP -- "oplog replication" --> MS2
+    end
+
+    BI["Risk / BI dashboards"]
+
+    APP --> API
+    USSD --> API
+    POS --> API
+    API -- "transfers & balances" --> PGP
+    API -- "profile, KYC, OTP, channel data" --> MP
+    API -. "app feed reads" .-> MS1
+    PGR --> BI
